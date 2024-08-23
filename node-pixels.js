@@ -180,6 +180,11 @@ module.exports = function getPixels(
           throw new Error('Invalid content-type');
         }
 
+        if (contentType === 'image/*') {
+          const ext = url.split(/[#?]/)[0].split('.').pop().trim();
+          contentType = `image/${ext?.toLowerCase()}`;
+        }
+
         return response.arrayBuffer();
       })
       .then((body) => {

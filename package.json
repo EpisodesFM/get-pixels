@@ -1,11 +1,8 @@
 {
   "name": "get-pixels",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Reads the pixels of an image as an ndarray",
   "main": "node-pixels.js",
-  "directories": {
-    "test": "test"
-  },
   "dependencies": {
     "jpeg-js": "^0.4.1",
     "mime-types": "^2.0.1",
@@ -16,16 +13,9 @@
     "parse-data-uri": "^0.2.0",
     "pngjs": "^7.0.0"
   },
-  "devDependencies": {
-    "tap": "^10.7.0",
-    "tape": "^2.12.3"
-  },
-  "scripts": {
-    "test": "tap test/*.js"
-  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/scijs/get-pixels.git"
+    "url": "https://github.com/EpisodesFM/get-pixels"
   },
   "keywords": [
     "ndarray",
