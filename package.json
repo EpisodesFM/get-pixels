@@ -1,6 +1,6 @@
 {
   "name": "@episodesfm/get-pixels",
-  "version": "5.0.4",
+  "version": "5.0.5",
   "description": "Reads the pixels of an image as an ndarray",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -43,5 +43,18 @@
     "eslint": "8.57.0",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
+  },
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": [
+        "win32",
+        "darwin",
+        "current"
+      ],
+      "cpu": [
+        "x64",
+        "arm64"
+      ]
+    }
   }
 }
