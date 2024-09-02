@@ -1,32 +1,44 @@
 import { promises as fs } from 'fs';
 import mime from 'mime-types';
 import parseDataURI from 'parse-data-uri';
-
 import { Jimp } from 'jimp';
 import { type NdArray } from 'ndarray';
+
 import { getParsedData } from './parsers';
 import { type JimpMimeType, type Options } from './types';
+import { fetchImageConentTypeFromHttp, fetchImageFromHttp } from './utils';
 
 export * from './types';
 
 export async function getPixels(
-  url: string,
+  url: string | Buffer,
   options?: Options
 ): Promise<NdArray<Uint8Array>> {
-  const { maxGifFrames = -1, resize, type } = options ?? {};
-  const opts = { maxGifFrames, resize, type };
-  const shouldResize = !!resize && (!!resize.width || !!resize.height);
+  const {
+    maxGifFrames = -1,
+    resize,
+    type,
+    maxSize = 2 * 1024 * 1024,
+  } = options ?? {};
+  const opts = { maxGifFrames, resize, type, maxSize };
   const isBuffer = Buffer.isBuffer(url);
-  const isHttp = url.startsWith('http://') || url.startsWith('https://');
-  const isDataUri = url.startsWith('data:');
+  const isHttp =
+    !isBuffer && (url.startsWith('http://') || url.startsWith('https://'));
+  const isDataUri = !isBuffer && url.startsWith('data:');
+  const shouldResize = !!resize && (!!resize.width || !!resize.height);
 
-  if (shouldResize) {
-    const { contentType, data } = await getResizedImage(url, resize);
-    return getPixelsFromBuffer(data, { ...opts, type: contentType ?? type });
+  if (shouldResize && !isHttp) {
+    console.warn(
+      '[get-pixels] Resize is only supported for http(s) images, ignoring resize option'
+    );
   }
 
-  if (isBuffer) {
+  if (Buffer.isBuffer(url)) {
     return getPixelsFromBuffer(url, opts);
+  }
+
+  if (shouldResize && isHttp) {
+    return getPixelsFromResizedImage(url, opts);
   }
   if (isDataUri) {
     return getPixelsFromDataUri(url, opts);
@@ -40,13 +52,32 @@ export async function getPixels(
 /**
  * Helpers
  */
-async function getPixelsFromBuffer(url: Buffer, options: Options) {
+async function getPixelsFromResizedImage(url: string, options: Options) {
+  const { contentType, data, fileSize } = await getResizedImage(
+    url,
+    options.resize!
+  );
+  const shouldAbort = !data && fileSize && fileSize > options.maxSize!;
+  if (shouldAbort) {
+    throw new Error(
+      `[get-pixels] Resize failed and image is too large (${fileSize} bytes). Aborting.`
+    );
+  }
+  return !!data
+    ? getPixelsFromBuffer(data, {
+        ...options,
+        type: contentType ?? options.type,
+      })
+    : getPixelsFromHttp(url, options);
+}
+
+async function getPixelsFromBuffer(data: Buffer, options: Options) {
   if (!options.type) {
     throw new Error(
       '[get-pixels] Invalid file type. Mime type is required for buffers.'
     );
   }
-  return await getParsedData(options.type, url, options);
+  return await getParsedData(options.type, data, options);
 }
 
 async function getPixelsFromDataUri(url: string, options: Options) {
@@ -89,37 +120,6 @@ async function getPixelsFromFile(url: string, options: Options) {
   }
 }
 
-function getImageContentType(url: string, headers: Headers) {
-  let contentType;
-  contentType = headers.get('content-type');
-  if (!contentType) {
-    throw new Error('Invalid content-type');
-  }
-  if (contentType === 'image/*') {
-    const ext = url.split(/[#?]/)[0]?.split('.').pop()?.trim();
-    contentType = `image/${ext?.toLowerCase()}`;
-  }
-  if (contentType === 'image/jpg') {
-    contentType = 'image/jpeg';
-  }
-  return contentType;
-}
-
-async function fetchImageFromHttp(url: string) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('HTTP request failed');
-    }
-    const contentType = getImageContentType(url, response.headers);
-    const data = await response.arrayBuffer();
-    return { contentType, data };
-  } catch (err) {
-    console.error('[get-pixels] Error fetching image', err);
-    throw new Error('[get-pixels] Error fetching image');
-  }
-}
-
 async function getResizedImage(
   url: string,
   size: { width?: number; height?: number }
@@ -134,17 +134,20 @@ async function getResizedImage(
     'image/jpeg',
     'image/png',
   ];
+  const { contentType, fileSize } = await fetchImageConentTypeFromHttp(url);
   try {
-    const { contentType, data } = await fetchImageFromHttp(url);
-    if (!jimpMimetypes.includes(contentType)) {
+    if (!contentType || !jimpMimetypes.includes(contentType)) {
       throw new Error(`Unsupported image type ${contentType}`);
     }
-    const image = (await Jimp.fromBuffer(Buffer.from(data))).resize({ w, h });
-    const resizedBuffer = await image.getBuffer(contentType as JimpMimeType);
-
-    return { contentType, data: resizedBuffer };
+    const resizedBuffer = await (await Jimp.read(url))
+      .resize({ w, h })
+      .getBuffer(contentType as JimpMimeType);
+    if (!resizedBuffer) {
+      throw new Error('Error resizing image');
+    }
+    return { contentType, data: resizedBuffer, fileSize };
   } catch (err) {
     console.error('[get-pixels] Error resizing image', err);
-    throw new Error('[get-pixels] Error resizing image');
+    return { contentType, data: undefined, fileSize };
   }
 }

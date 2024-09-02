@@ -1,0 +1,14 @@
+diff --git a/dist/commonjs/utils/image-bitmap.js b/dist/commonjs/utils/image-bitmap.js
+index 79955694f9acb57f8223885ad98ec4720390995c..d2c15e9925593dfc3fa9ea017be49ddc2fb9779e 100644
+--- a/dist/commonjs/utils/image-bitmap.js
++++ b/dist/commonjs/utils/image-bitmap.js
+@@ -123,6 +123,9 @@ async function attemptExifRotate(image, buffer) {
+         exifRotate(image); // EXIF data
+     }
+     catch (error) {
++        if (error?.message?.includes('Invalid JPEG section')) {
++            return;
++        }
+         console.error(error);
+     }
+ }
