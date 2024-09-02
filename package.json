@@ -1,8 +1,15 @@
 {
-  "name": "get-pixels",
-  "version": "4.0.1",
+  "name": "@episodesfm/get-pixels",
+  "version": "5.0.0",
   "description": "Reads the pixels of an image as an ndarray",
-  "main": "node-pixels.js",
+  "main": "dist/index.js",
+  "types": "dist/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "jpeg-js": "^0.4.1",
     "mime-types": "^2.0.1",
@@ -11,32 +18,25 @@
     "node-bitmap": "0.0.1",
     "omggif": "^1.0.5",
     "parse-data-uri": "^0.2.0",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "sharp": "^0.33.5"
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/EpisodesFM/get-pixels"
+    "url": "https://github.com/EpisodesFM/get-pixels.git"
   },
-  "keywords": [
-    "ndarray",
-    "pixel",
-    "get",
-    "read",
-    "pixel",
-    "image",
-    "png",
-    "jpeg",
-    "jpg",
-    "jpe",
-    "gif",
-    "decode",
-    "buffer",
-    "data",
-    "parse",
-    "dom",
-    "node",
-    "browserify"
-  ],
   "license": "MIT",
-  "readmeFilename": "README.md"
+  "readmeFilename": "README.md",
+  "devDependencies": {
+    "@types/eslint": "8.56.10",
+    "@types/mime-types": "^2.1.4",
+    "@types/ndarray": "^1.0.14",
+    "@types/node": "^22.5.2",
+    "@types/omggif": "^1.0.5",
+    "@types/pngjs": "^6.0.5",
+    "@typescript-eslint/eslint-plugin": "^8.3.0",
+    "@typescript-eslint/parser": "^8.3.0",
+    "eslint": "8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
 }
