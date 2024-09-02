@@ -19,3 +19,5 @@ test/*
 .npmrc
 tsconfig.json
 prettier.config.js
+.github
+.vscode
