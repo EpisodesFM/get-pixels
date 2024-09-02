@@ -4,17 +4,16 @@ import parseDataURI from 'parse-data-uri';
 import sharp from 'sharp';
 import { type NdArray } from 'ndarray';
 import { getParsedData } from './parsers';
-import { type Options, type ImageType } from './types';
+import { type Options } from './types';
 
 export * from './types';
 
 export async function getPixels(
   url: string,
-  type?: ImageType,
   options?: Options
 ): Promise<NdArray<Uint8Array>> {
-  const { maxGifFrames = -1, resize } = options ?? {};
-  const opts = { maxGifFrames, resize };
+  const { maxGifFrames = -1, resize, type } = options ?? {};
+  const opts = { maxGifFrames, resize, type };
   const shouldResize = !!resize && (!!resize.width || !!resize.height);
   const isBuffer = Buffer.isBuffer(url);
   const isHttp = url.startsWith('http://') || url.startsWith('https://');
@@ -22,14 +21,14 @@ export async function getPixels(
 
   if (shouldResize) {
     const { contentType, data } = await getResizedImage(url, resize);
-    return getPixelsFromBuffer(data, opts, contentType ?? type);
+    return getPixelsFromBuffer(data, { ...opts, type: contentType ?? type });
   }
 
   if (isBuffer) {
-    return getPixelsFromBuffer(url, opts, type);
+    return getPixelsFromBuffer(url, opts);
   }
   if (isDataUri) {
-    return getPixelsFromDataUri(url, opts, type);
+    return getPixelsFromDataUri(url, opts);
   }
   if (isHttp) {
     return getPixelsFromHttp(url, opts);
@@ -40,28 +39,24 @@ export async function getPixels(
 /**
  * Helpers
  */
-async function getPixelsFromBuffer(
-  url: Buffer,
-  options: Options,
-  type?: string
-) {
-  if (!type) {
+async function getPixelsFromBuffer(url: Buffer, options: Options) {
+  if (!options.type) {
     throw new Error(
       '[get-pixels] Invalid file type. Mime type is required for buffers.'
     );
   }
-  return await getParsedData(type, url, options);
+  return await getParsedData(options.type, url, options);
 }
 
-async function getPixelsFromDataUri(
-  url: string,
-  options: Options,
-  type?: ImageType
-) {
+async function getPixelsFromDataUri(url: string, options: Options) {
   try {
     const buffer = parseDataURI(url);
     if (buffer) {
-      return await getParsedData(type ?? buffer.mimeType, buffer.data, options);
+      return await getParsedData(
+        options.type ?? buffer.mimeType,
+        buffer.data,
+        options
+      );
     } else {
       throw new Error('[get-pixels] Error parsing data URI');
     }

@@ -1,5 +1,5 @@
-export type ImageType = 'image/png' | 'image/jpg' | 'image/jpeg' | 'image/gif';
 export type Options = {
+  type?: string;
   maxGifFrames?: number;
   resize?: { width?: number; height?: number };
 };

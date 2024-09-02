@@ -1,6 +1,6 @@
 {
   "name": "@episodesfm/get-pixels",
-  "version": "5.0.3",
+  "version": "5.0.4",
   "description": "Reads the pixels of an image as an ndarray",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
