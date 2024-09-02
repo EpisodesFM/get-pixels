@@ -14,3 +14,8 @@ results
 npm-debug.log
 node_modules/*
 test/*
+.eslintrc.cjs
+.gitignore
+.npmrc
+tsconfig.json
+prettier.config.js

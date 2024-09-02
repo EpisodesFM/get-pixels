@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - '**/feat/*'
+      - '**/fix/*'
+
+jobs:
+  lint_and_build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 21
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9.4.0
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run TypeScript validation
+        run: pnpm tsc --noEmit
+
+      - name: Run ESLint
+        run: pnpm lint

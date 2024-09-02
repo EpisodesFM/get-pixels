@@ -1,0 +1,145 @@
+import { promises as fs } from 'fs';
+import mime from 'mime-types';
+import parseDataURI from 'parse-data-uri';
+import { type Options, type ImageType } from './types';
+import { getParsedData } from './parsers';
+import sharp from 'sharp';
+
+export * from './types';
+
+export async function getPixels(
+  url: string,
+  type?: ImageType,
+  options?: Options
+) {
+  const { maxGifFrames = -1, resize } = options ?? {};
+  const opts = { maxGifFrames, resize };
+  const shouldResize = !!resize && (!!resize.width || !!resize.height);
+  const isBuffer = Buffer.isBuffer(url);
+  const isHttp = url.startsWith('http://') || url.startsWith('https://');
+  const isDataUri = url.startsWith('data:');
+
+  if (shouldResize) {
+    const { contentType, data } = await getResizedImage(url, resize);
+    return getPixelsFromBuffer(data, opts, contentType ?? type);
+  }
+
+  if (isBuffer) {
+    return getPixelsFromBuffer(url, opts, type);
+  }
+  if (isDataUri) {
+    return getPixelsFromDataUri(url, opts, type);
+  }
+  if (isHttp) {
+    return getPixelsFromHttp(url, opts);
+  }
+  return getPixelsFromFile(url, opts);
+}
+
+/**
+ * Helpers
+ */
+async function getPixelsFromBuffer(
+  url: Buffer,
+  options: Options,
+  type?: string
+) {
+  if (!type) {
+    throw new Error(
+      '[get-pixels] Invalid file type. Mime type is required for buffers.'
+    );
+  }
+  return await getParsedData(type, url, options);
+}
+
+async function getPixelsFromDataUri(
+  url: string,
+  options: Options,
+  type?: ImageType
+) {
+  try {
+    const buffer = parseDataURI(url);
+    if (buffer) {
+      process.nextTick(async () => {
+        return await getParsedData(
+          type ?? buffer.mimeType,
+          buffer.data,
+          options
+        );
+      });
+    } else {
+      throw new Error('[get-pixels] Error parsing data URI');
+    }
+  } catch (err) {
+    process.nextTick(() => {
+      console.error('[get-pixels] Error parsing data URI', err);
+      throw new Error('[get-pixels] Error parsing data URI');
+    });
+  }
+}
+
+async function getPixelsFromHttp(url: string, options: Options) {
+  try {
+    const { contentType, data } = await fetchImageFromHttp(url);
+    return await getParsedData(contentType, data, options);
+  } catch (err) {
+    console.error('[get-pixels] Error getting pixels from http image', err);
+    throw new Error('[get-pixels] Error getting pixels from http image');
+  }
+}
+
+async function getPixelsFromFile(url: string, options: Options) {
+  try {
+    const data = await fs.readFile(url);
+    const mimeType = mime.lookup(url);
+    if (!mimeType) throw new Error('Invalid file type');
+    return await getParsedData(mimeType, data, options);
+  } catch (err) {
+    console.error('[get-pixels] Error reading file', err);
+    throw new Error('[get-pixels] Error reading file');
+  }
+}
+
+function getImageContentType(url: string, headers: Headers) {
+  let contentType;
+  contentType = headers.get('content-type');
+  if (!contentType) {
+    throw new Error('Invalid content-type');
+  }
+  if (contentType === 'image/*') {
+    const ext = url.split(/[#?]/)[0]?.split('.').pop()?.trim();
+    contentType = `image/${ext?.toLowerCase()}`;
+  }
+  return contentType;
+}
+
+async function fetchImageFromHttp(url: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('HTTP request failed');
+    }
+    const contentType = getImageContentType(url, response.headers);
+    const data = await response.arrayBuffer();
+    return { contentType, data };
+  } catch (err) {
+    console.error('[get-pixels] Error fetching image', err);
+    throw new Error('[get-pixels] Error fetching image');
+  }
+}
+
+async function getResizedImage(
+  url: string,
+  size: { width?: number; height?: number }
+) {
+  const width = size.width ?? size.height;
+  const height = size.height ?? size.width;
+  try {
+    const { contentType, data } = await fetchImageFromHttp(url);
+    const resizedImage = await sharp(data).resize(width, height).toBuffer();
+    return { contentType, data: resizedImage };
+  } catch (err) {
+    console.error('[get-pixels] Error resizing image', err);
+    throw new Error('[get-pixels] Error resizing image');
+  }
+}
