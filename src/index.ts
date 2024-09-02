@@ -126,7 +126,7 @@ async function getResizedImage(
     const { contentType, data } = await fetchImageFromHttp(url);
     // @ts-expect-error - Jimp types are messed up
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const image = await Jimp.fromBuffer(data);
+    const image = await Jimp.read(data);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call , @typescript-eslint/no-unsafe-member-access
     await image.resize(width, height);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment , @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
