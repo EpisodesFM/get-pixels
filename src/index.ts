@@ -139,7 +139,7 @@ async function getResizedImage(
     if (!jimpMimetypes.includes(contentType)) {
       throw new Error(`Unsupported image type ${contentType}`);
     }
-    const image = (await Jimp.fromBuffer(data)).resize({ w, h });
+    const image = (await Jimp.fromBuffer(Buffer.from(data))).resize({ w, h });
     const resizedBuffer = await image.getBuffer(contentType as JimpMimeType);
 
     return { contentType, data: resizedBuffer };
