@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import mime from 'mime-types';
 import parseDataURI from 'parse-data-uri';
-import sharp from 'sharp';
+import Jimp from 'jimp';
 import { type NdArray } from 'ndarray';
 import { getParsedData } from './parsers';
 import { type Options } from './types';
@@ -124,8 +124,15 @@ async function getResizedImage(
   const height = size.height ?? size.width;
   try {
     const { contentType, data } = await fetchImageFromHttp(url);
-    const resizedImage = await sharp(data).resize(width, height).toBuffer();
-    return { contentType, data: resizedImage };
+    // @ts-expect-error - Jimp types are messed up
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const image = await Jimp.fromBuffer(data);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call , @typescript-eslint/no-unsafe-member-access
+    await image.resize(width, height);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment , @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const resizedBuffer = await image.getBuffer(contentType);
+
+    return { contentType, data: resizedBuffer as Buffer };
   } catch (err) {
     console.error('[get-pixels] Error resizing image', err);
     throw new Error('[get-pixels] Error resizing image');
