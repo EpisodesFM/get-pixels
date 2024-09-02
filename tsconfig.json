@@ -18,6 +18,8 @@
     "lib": ["esnext"],
     "noEmit": false,
     "emitDeclarationOnly": false,
+    "declaration": true,
+    "declarationDir": "./dist",
     "module": "NodeNext",
 
     /* Path Aliases */
