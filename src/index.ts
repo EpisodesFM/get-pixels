@@ -1,9 +1,10 @@
 import { promises as fs } from 'fs';
 import mime from 'mime-types';
 import parseDataURI from 'parse-data-uri';
-import { type Options, type ImageType } from './types';
-import { getParsedData } from './parsers';
 import sharp from 'sharp';
+import { type NdArray } from 'ndarray';
+import { getParsedData } from './parsers';
+import { type Options, type ImageType } from './types';
 
 export * from './types';
 
@@ -11,7 +12,7 @@ export async function getPixels(
   url: string,
   type?: ImageType,
   options?: Options
-) {
+): Promise<NdArray<Uint8Array>> {
   const { maxGifFrames = -1, resize } = options ?? {};
   const opts = { maxGifFrames, resize };
   const shouldResize = !!resize && (!!resize.width || !!resize.height);
@@ -60,21 +61,13 @@ async function getPixelsFromDataUri(
   try {
     const buffer = parseDataURI(url);
     if (buffer) {
-      process.nextTick(async () => {
-        return await getParsedData(
-          type ?? buffer.mimeType,
-          buffer.data,
-          options
-        );
-      });
+      return await getParsedData(type ?? buffer.mimeType, buffer.data, options);
     } else {
       throw new Error('[get-pixels] Error parsing data URI');
     }
   } catch (err) {
-    process.nextTick(() => {
-      console.error('[get-pixels] Error parsing data URI', err);
-      throw new Error('[get-pixels] Error parsing data URI');
-    });
+    console.error('[get-pixels] Error parsing data URI', err);
+    throw new Error('[get-pixels] Error parsing data URI');
   }
 }
 
