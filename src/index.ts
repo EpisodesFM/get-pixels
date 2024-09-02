@@ -1,10 +1,11 @@
 import { promises as fs } from 'fs';
 import mime from 'mime-types';
 import parseDataURI from 'parse-data-uri';
-import Jimp from 'jimp';
+
+import { Jimp } from 'jimp';
 import { type NdArray } from 'ndarray';
 import { getParsedData } from './parsers';
-import { type Options } from './types';
+import { type JimpMimeType, type Options } from './types';
 
 export * from './types';
 
@@ -98,6 +99,9 @@ function getImageContentType(url: string, headers: Headers) {
     const ext = url.split(/[#?]/)[0]?.split('.').pop()?.trim();
     contentType = `image/${ext?.toLowerCase()}`;
   }
+  if (contentType === 'image/jpg') {
+    contentType = 'image/jpeg';
+  }
   return contentType;
 }
 
@@ -120,19 +124,25 @@ async function getResizedImage(
   url: string,
   size: { width?: number; height?: number }
 ) {
-  const width = size.width ?? size.height;
-  const height = size.height ?? size.width;
+  const w = size.width ?? size.height ?? 256;
+  const h = size.height ?? size.width ?? 256;
+  const jimpMimetypes = [
+    'image/bmp',
+    'image/tiff',
+    'image/x-ms-bmp',
+    'image/gif',
+    'image/jpeg',
+    'image/png',
+  ];
   try {
     const { contentType, data } = await fetchImageFromHttp(url);
-    // @ts-expect-error - Jimp types are messed up
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const image = await Jimp.read(data);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call , @typescript-eslint/no-unsafe-member-access
-    await image.resize(width, height);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment , @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const resizedBuffer = await image.getBuffer(contentType);
+    if (!jimpMimetypes.includes(contentType)) {
+      throw new Error(`Unsupported image type ${contentType}`);
+    }
+    const image = (await Jimp.fromBuffer(data)).resize({ w, h });
+    const resizedBuffer = await image.getBuffer(contentType as JimpMimeType);
 
-    return { contentType, data: resizedBuffer as Buffer };
+    return { contentType, data: resizedBuffer };
   } catch (err) {
     console.error('[get-pixels] Error resizing image', err);
     throw new Error('[get-pixels] Error resizing image');
