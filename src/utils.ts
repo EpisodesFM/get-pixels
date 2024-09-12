@@ -36,12 +36,15 @@ export async function fetchImageFromHttp(url: string) {
  * Helpers
  */
 function getImageContentType(url: string, headers: Headers) {
+  const catchAllTypes = [
+    'image/*',
+    'application/octet-stream',
+    'binary/octet-stream',
+  ];
   let contentType;
   contentType = headers.get('content-type');
-  if (!contentType) {
-    throw new Error('Invalid content-type');
-  }
-  if (contentType === 'image/*') {
+
+  if (!contentType || catchAllTypes.includes(contentType)) {
     const ext = url.split(/[#?]/)[0]?.split('.').pop()?.trim();
     contentType = `image/${ext?.toLowerCase()}`;
   }
